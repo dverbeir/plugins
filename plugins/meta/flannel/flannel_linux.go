@@ -66,6 +66,7 @@ func doCmdAdd(args *skel.CmdArgs, n *NetConf, fenv *subnetEnv) error {
 		}
 		rtes = append(rtes, extraRtes...)
 	}
+	Log(DebugLevel, "flannel CNI doCmdAdd() routes for delegate: %v", rtes)
 
 	n.Delegate["ipam"] = map[string]interface{}{
 		"type":   "host-local",
