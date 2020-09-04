@@ -22,10 +22,11 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"os"
+
 	"github.com/containernetworking/cni/pkg/invoke"
 	"github.com/containernetworking/cni/pkg/skel"
 	"github.com/containernetworking/cni/pkg/types"
-	"os"
 )
 
 func doCmdAdd(args *skel.CmdArgs, n *NetConf, fenv *subnetEnv) error {
@@ -55,14 +56,21 @@ func doCmdAdd(args *skel.CmdArgs, n *NetConf, fenv *subnetEnv) error {
 		n.Delegate["cniVersion"] = n.CNIVersion
 	}
 
+	rtes := []types.Route{{Dst: *fenv.nw}}
+
+	if hasKey(n.Delegate, "extraRoutes") {
+		extraRtes := []types.Route{}
+		buf, _ := json.Marshal(n.Delegate["extraRoutes"])
+		if err := json.Unmarshal(buf, &extraRtes); err != nil {
+			return fmt.Errorf("failed to parse extraRoutes: %w", err)
+		}
+		rtes = append(rtes, extraRtes...)
+	}
+
 	n.Delegate["ipam"] = map[string]interface{}{
 		"type":   "host-local",
 		"subnet": fenv.sn.String(),
-		"routes": []types.Route{
-			{
-				Dst: *fenv.nw,
-			},
-		},
+		"routes": rtes,
 	}
 
 	return delegateAdd(args.ContainerID, n.DataDir, n.Delegate)
